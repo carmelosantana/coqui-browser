@@ -1,134 +1,67 @@
-# Coqui Browser Toolkit
+# Coqui Browser
 
-Browser automation toolkit for [Coqui](https://github.com/AgentCoqui/coqui). Wraps [playwright-cli](https://github.com/anthropics/playwright-cli) to give agents full web browsing capabilities including navigation, page interaction, screenshots, cookie/storage management, and session control.
+`carmelosantana/coqui-browser` is a Playwright PHP browser toolkit for Coqui. It replaces the legacy `coquibot/coqui-toolkit-browser` package with a direct PHP integration that supports multi-tab sessions, structured page snapshots, browser storage state, screenshots, PDFs, and richer interaction against modern web apps.
 
 ## Requirements
 
 - PHP 8.4+
-- Node.js 18+ and npm (for playwright-cli installation)
+- Node.js 20+
+- Coqui / `carmelosantana/php-agents`
+- Playwright browser binaries installed through `vendor/bin/playwright-install`
 
-## Installation
-
-```bash
-composer require coquibot/coqui-toolkit-browser
-```
-
-When installed alongside Coqui, the toolkit is **auto-discovered** via Composer's `extra.php-agents.toolkits` -- no manual registration needed.
-
-On first use, the agent will automatically install playwright-cli and Chromium into `.workspace/browser/` via the `browser_session setup` action. No manual Node.js setup is needed.
-
-## Tools Provided
-
-### `browser`
-
-Navigate web pages and interact with elements.
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `action` | enum | Yes | `open`, `click`, `dblclick`, `fill`, `type`, `press`, `keydown`, `keyup`, `hover`, `select`, `check`, `uncheck`, `scroll`, `drag`, `upload`, `back`, `forward`, `reload`, `eval`, `resize`, `wait`, `close` |
-| `url` | string | No | URL for `open` action |
-| `ref` | string | No | Element ref from snapshot (for interaction actions) |
-| `value` | string | No | Value for `fill`, `type`, `select`, `eval` |
-| `key` | string | No | Key for `press`, `keydown`, `keyup` (e.g. "Enter", "Tab") |
-| `session` | string | No | Override session name |
-| `headed` | bool | No | Show visible browser (default: headless) |
-| `browser_engine` | enum | No | `chromium`, `firefox`, `webkit` |
-| `persistent` | bool | No | Use persistent browser profile |
-
-### `browser_capture`
-
-Capture page state as snapshots, screenshots, or PDFs.
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `action` | enum | Yes | `snapshot`, `screenshot`, `pdf` |
-| `ref` | string | No | Target element ref |
-| `filename` | string | No | Output filename (auto-generated if omitted) |
-| `session` | string | No | Override session name |
-
-### `browser_storage`
-
-Manage cookies, localStorage, sessionStorage, and persist browser state.
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `action` | enum | Yes | `cookie_get`, `cookie_get_all`, `cookie_set`, `cookie_delete`, `cookie_clear`, `localstorage_get`, `localstorage_set`, `localstorage_delete`, `localstorage_clear`, `sessionstorage_get`, `sessionstorage_set`, `sessionstorage_delete`, `sessionstorage_clear`, `state_save`, `state_load` |
-| `name` | string | No | Cookie/storage key name |
-| `value` | string | No | Value for set operations |
-| `domain` | string | No | Cookie domain |
-| `filename` | string | No | State filename for save/load |
-| `session` | string | No | Override session name |
-
-### `browser_session`
-
-Manage browser sessions and playwright-cli installation.
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `action` | enum | Yes | `setup`, `setup_deps`, `status`, `list`, `close`, `close_all`, `kill_all`, `delete_data` |
-| `session` | string | No | Target session for close/delete_data |
-
-## Session Management
-
-Sessions are auto-scoped to the workspace using a deterministic hash (`coqui-{md5_8chars}`). All four tools share the same session by default, so cookies and state persist across tool calls.
-
-Override the session name with the `session` parameter on any tool to manage multiple independent browser contexts.
-
-## Agent Workflow
-
-1. `browser_session` action `setup` -- install playwright-cli (first time only)
-2. `browser` action `open` -- navigate to a URL
-3. `browser_capture` action `snapshot` -- get the accessibility tree with element refs
-4. `browser` action `click`/`fill`/`type` -- interact using refs from the snapshot
-5. `browser_capture` action `screenshot` -- capture visual output
-6. `browser_session` action `close` -- clean up when done
-
-## Standalone Usage
-
-```php
-<?php
-
-declare(strict_types=1);
-
-use CoquiBot\Toolkits\Browser\BrowserToolkit;
-
-require __DIR__ . '/vendor/autoload.php';
-
-$toolkit = BrowserToolkit::fromEnv();
-
-foreach ($toolkit->tools() as $tool) {
-    echo $tool->name() . ': ' . $tool->description() . PHP_EOL;
-}
-
-// Navigate to a page
-$browser = $toolkit->tools()[0];
-$result = $browser->execute([
-    'action' => 'open',
-    'url' => 'https://example.com',
-]);
-echo $result->content;
-```
-
-## Development
+## Install
 
 ```bash
-git clone https://github.com/AgentCoqui/coqui-toolkit-browser.git
-cd coqui-toolkit-browser
+composer require carmelosantana/coqui-browser
+vendor/bin/playwright-install --browsers
+```
+
+For Linux CI or fresh containers, prefer:
+
+```bash
+vendor/bin/playwright-install --with-deps --browsers
+```
+
+## Migration
+
+If you still have the legacy npm-backed browser toolkit installed, remove it before adopting this package:
+
+```bash
+composer remove coquibot/coqui-toolkit-browser
+composer require carmelosantana/coqui-browser
+```
+
+This new toolkit uses a different runtime model and writes artifacts under `.workspace/browser-playwright/` instead of the legacy `.workspace/browser/` path.
+
+## Tools
+
+- `browser_session`: environment setup, session lifecycle, and status
+- `browser_page`: navigation, tabs, waits, and current page state
+- `browser_interact`: click, fill, type, press, drag, upload, and evaluate
+- `browser_capture`: structured snapshots, screenshots, PDFs, and extraction
+- `browser_storage`: cookies and storage-state save/load helpers
+
+## Browser Notes
+
+- Chromium, Firefox, and WebKit are supported for navigation, interaction, snapshots, screenshots, and storage-state workflows.
+- PDF generation is Chromium-only because Playwright itself only supports `page.pdf()` on headless Chromium.
+
+## Typical Workflow
+
+1. Call `browser_session` with `action: setup` once on a machine to install browsers.
+2. Call `browser_page` with `action: open` and a URL.
+3. Call `browser_capture` with `action: snapshot` to inspect the page and get element refs.
+4. Call `browser_interact` with a `ref`, selector, role/name pair, or text target.
+5. Use `browser_capture` for screenshots, PDFs, or extraction.
+6. Use `browser_storage` to save or load login state when needed.
+
+## Testing
+
+```bash
 composer install
+composer test
+COQUI_BROWSER_RUN_INTEGRATION=1 composer test:integration
+composer analyse
 ```
 
-### Run tests
-
-```bash
-./vendor/bin/pest
-```
-
-### Static analysis
-
-```bash
-./vendor/bin/phpstan analyse
-```
-
-## License
-
-MIT
+Integration tests launch real browsers through Playwright PHP and use the fixtures in `tests/Fixtures/`.

@@ -2,44 +2,51 @@
 
 declare(strict_types=1);
 
-use CoquiBot\Toolkits\Browser\BrowserToolkit;
+use CarmeloSantana\PHPAgents\Contract\ToolkitInterface;
+use CoquiBrowser\BrowserToolkit;
+use CoquiBrowser\Runtime\BrowserManager;
 
-test('toolkit implements ToolkitInterface', function () {
-    $toolkit = new BrowserToolkit(workspacePath: sys_get_temp_dir());
+test('toolkit implements ToolkitInterface', function (): void {
+    $toolkit = new BrowserToolkit(sys_get_temp_dir());
 
-    expect($toolkit)->toBeInstanceOf(\CarmeloSantana\PHPAgents\Contract\ToolkitInterface::class);
+    expect($toolkit)->toBeInstanceOf(ToolkitInterface::class);
 });
 
-test('tools returns all four browser tools', function () {
-    $toolkit = new BrowserToolkit(workspacePath: sys_get_temp_dir());
-    $tools = $toolkit->tools();
+test('toolkit exposes expected tool names', function (): void {
+    $toolkit = new BrowserToolkit(sys_get_temp_dir());
 
-    expect($tools)->toHaveCount(4);
+    $names = array_map(static fn ($tool): string => $tool->name(), $toolkit->tools());
 
-    $names = array_map(fn($tool) => $tool->name(), $tools);
-    expect($names)->toBe(['browser', 'browser_capture', 'browser_storage', 'browser_session']);
+    expect($names)->toBe([
+        'browser_session',
+        'browser_page',
+        'browser_interact',
+        'browser_capture',
+        'browser_storage',
+    ]);
 });
 
-test('each tool implements ToolInterface', function () {
-    $toolkit = new BrowserToolkit(workspacePath: sys_get_temp_dir());
-    $tools = $toolkit->tools();
-
-    foreach ($tools as $tool) {
-        expect($tool)->toBeInstanceOf(\CarmeloSantana\PHPAgents\Contract\ToolInterface::class);
-    }
-});
-
-test('guidelines returns non-empty string with XML tag', function () {
-    $toolkit = new BrowserToolkit(workspacePath: sys_get_temp_dir());
+test('guidelines mention snapshot and storage state workflow', function (): void {
+    $toolkit = new BrowserToolkit(sys_get_temp_dir());
 
     expect($toolkit->guidelines())
-        ->toBeString()
-        ->not->toBeEmpty()
-        ->toContain('BROWSER-TOOLKIT-GUIDELINES');
+        ->toContain('browser_capture')
+        ->toContain('snapshot')
+        ->toContain('browser_storage');
 });
 
-test('fromEnv creates instance', function () {
+test('fromEnv creates a toolkit instance', function (): void {
     $toolkit = BrowserToolkit::fromEnv();
 
     expect($toolkit)->toBeInstanceOf(BrowserToolkit::class);
+});
+
+test('default session name is deterministic', function (): void {
+    $first = BrowserManager::defaultSessionName('/tmp/workspace-a');
+    $second = BrowserManager::defaultSessionName('/tmp/workspace-a');
+    $third = BrowserManager::defaultSessionName('/tmp/workspace-b');
+
+    expect($first)->toBe($second)
+        ->and($first)->not->toBe($third)
+        ->and($first)->toStartWith('coqui-browser-');
 });

@@ -1,58 +1,69 @@
 {
-    "name": "coquibot/coqui-toolkit-browser",
-    "description": "Browser automation toolkit for Coqui — web browsing via playwright-cli",
+    "name": "carmelosantana/coqui-browser",
+    "description": "Playwright PHP browser toolkit for Coqui — robust browser sessions, multi-tab workflows, snapshots, captures, and storage state management.",
     "type": "library",
     "license": "MIT",
+    "keywords": [
+        "coqui",
+        "php-agents",
+        "browser",
+        "playwright",
+        "automation",
+        "toolkit"
+    ],
     "authors": [
         {
             "name": "Carmelo Santana"
         }
     ],
-    "keywords": [
-        "php-agents",
-        "browser",
-        "playwright",
-        "web-automation",
-        "coqui",
-        "toolkit"
-    ],
     "require": {
-        "php": "^8.4"
+        "php": "^8.4",
+        "carmelosantana/php-agents": "^0.16",
+        "playwright-php/playwright": "^1.5",
+        "symfony/process": "^7.3 || ^8.0"
     },
     "require-dev": {
-        "carmelosantana/php-agents": "^0.7",
-        "pestphp/pest": "^3.0",
-        "phpstan/phpstan": "^2.0"
+        "pestphp/pest": "^4.0",
+        "phpstan/phpstan": "^2.1"
     },
     "autoload": {
         "psr-4": {
-            "CoquiBot\\Toolkits\\Browser\\": "src/"
+            "CoquiBrowser\\": "src/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "CoquiBot\\Toolkits\\Browser\\Tests\\": "tests/"
+            "CoquiBrowser\\Tests\\": "tests/"
         }
     },
+    "extra": {
+        "php-agents": {
+            "toolkits": [
+                "CoquiBrowser\\BrowserToolkit"
+            ],
+            "description": "Browser automation via Playwright PHP for Coqui.",
+            "gated": {
+                "browser_session": [
+                    "setup",
+                    "close_all"
+                ],
+                "browser_interact": [
+                    "evaluate"
+                ]
+            }
+        }
+    },
+    "scripts": {
+        "test": "pest --testsuite=Unit",
+        "test:integration": "pest --testsuite=Integration",
+        "analyse": "phpstan analyse --memory-limit=1G"
+    },
     "config": {
-        "optimize-autoloader": true,
         "sort-packages": true,
         "allow-plugins": {
             "pestphp/pest-plugin": true
         }
     },
-    "scripts": {
-        "test": "pest",
-        "analyse": "phpstan analyse"
-    },
-    "extra": {
-        "php-agents": {
-            "toolkits": [
-                "CoquiBot\\Toolkits\\Browser\\BrowserToolkit"
-            ],
-            "description": "Browser automation — web browsing, page interaction, and data extraction via playwright-cli"
-        }
-    },
-    "minimum-stability": "dev",
+    "minimum-stability": "stable",
     "prefer-stable": true
 }

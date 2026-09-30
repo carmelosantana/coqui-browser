@@ -7,8 +7,8 @@ on:
     branches: [main]
 
 jobs:
-  tests:
-    name: Tests (PHP 8.4)
+  unit-and-static:
+    name: Unit + PHPStan (PHP 8.4)
     runs-on: ubuntu-latest
 
     steps:
@@ -20,7 +20,13 @@ jobs:
         with:
           php-version: '8.4'
           extensions: pdo_sqlite, mbstring, curl, xml, zip
+          tools: composer:v2.9.8
           coverage: none
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
 
       - name: Get Composer cache directory
         id: composer-cache
@@ -36,37 +42,63 @@ jobs:
       - name: Install dependencies
         run: composer install --prefer-dist --no-progress --no-interaction
 
-      - name: Run tests
+      - name: Run unit tests
         run: composer test
-
-  static-analysis:
-    name: PHPStan (PHP 8.4)
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.4'
-          extensions: pdo_sqlite, mbstring, curl, xml, zip
-          coverage: none
-
-      - name: Get Composer cache directory
-        id: composer-cache
-        run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
-
-      - name: Cache Composer dependencies
-        uses: actions/cache@v4
-        with:
-          path: ${{ steps.composer-cache.outputs.dir }}
-          key: ${{ runner.os }}-composer-${{ hashFiles('composer.json') }}
-          restore-keys: ${{ runner.os }}-composer-
-
-      - name: Install dependencies
-        run: composer install --prefer-dist --no-progress --no-interaction
 
       - name: Run PHPStan
         run: composer analyse
+
+  integration:
+    name: Integration (${{ matrix.browser }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: pdo_sqlite, mbstring, curl, xml, zip
+          tools: composer:v2.9.8
+          coverage: none
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Get Composer cache directory
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: ${{ runner.os }}-composer-${{ hashFiles('composer.json') }}
+          restore-keys: ${{ runner.os }}-composer-
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('composer.json') }}-${{ matrix.browser }}
+          restore-keys: ${{ runner.os }}-playwright-
+
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-progress --no-interaction
+
+      - name: Install Playwright browsers
+        run: vendor/bin/playwright-install --with-deps --browsers
+
+      - name: Run integration tests
+        env:
+          COQUI_BROWSER_RUN_INTEGRATION: '1'
+          COQUI_BROWSER_TEST_BROWSER: ${{ matrix.browser }}
+        run: composer test:integration
