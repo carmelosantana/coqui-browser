@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Browser Toolkit Fixture</title>
+</head>
+<body>
+  <main>
+    <h1>Browser Toolkit Fixture</h1>
+    <form>
+      <label>
+        Name
+        <input id="name" name="name" type="text" />
+      </label>
+
+      <label>
+        Flavor
+        <select id="flavor" name="flavor">
+          <option value="vanilla">Vanilla</option>
+          <option value="mint">Mint</option>
+          <option value="coffee">Coffee</option>
+        </select>
+      </label>
+    </form>
+
+    <button id="reveal" type="button">Reveal dynamic content</button>
+    <div id="output" aria-live="polite"></div>
+    <a href="/secondary-page.html" target="_blank">Open secondary page</a>
+
+    <script>
+      document.getElementById('reveal').addEventListener('click', () => {
+        window.setTimeout(() => {
+          document.getElementById('output').textContent = 'Dynamic content loaded';
+        }, 300);
+      });
+    </script>
+  </main>
+</body>
+</html>
